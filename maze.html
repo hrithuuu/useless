@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Retro Maze — Collect the Coins</title>
+    <style>
+         :root {
+            --bg: #0b1221;
+            --panel: #0f1724;
+            --accent: #ffd166;
+            --wall: #0b6e4f
+        }
+        
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            font-family: Inter, system-ui, Segoe UI, Arial;
+            background: linear-gradient(180deg, #071029, #071a1a);
+            color: #e6f2ff
+        }
+        
+        .wrap {
+            max-width: 900px;
+            margin: 28px auto;
+            padding: 14px
+        }
+        
+        h1 {
+            margin: 0 0 12px;
+            font-size: 20px
+        }
+        
+        #hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            gap: 8px
+        }
+        
+        #counters {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+        
+        .counter {
+            background: rgba(0, 0, 0, 0.18);
+            padding: 8px 12px;
+            border-radius: 8px;
+            min-width: 140px;
+            text-align: center
+        }
+        
+        .counter strong {
+            display: block;
+            font-size: 18px
+        }
+        
+        #controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+        
+        button {
+            background: #0e1726;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            color: #e6f2ff;
+            padding: 8px 10px;
+            border-radius: 8px;
+            cursor: pointer
+        }
+        
+        button:active {
+            transform: translateY(1px)
+        }
+        
+        canvas {
+            display: block;
+            background: #020612;
+            border-radius: 8px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6)
+        }
+        
+        .info {
+            margin-top: 10px;
+            color: rgba(230, 242, 255, 0.8);
+            font-size: 13px
+        }
+        
+        .badge {
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.03)
+        }
+        
+        footer {
+            margin-top: 14px;
+            color: rgba(230, 242, 255, 0.6);
+            font-size: 12px
+        }
+        
+        .payment-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999
+        }
+        
+        .payment-box {
+            background: #0f1724;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            text-align: center;
+            color: white
+        }
+        
+        .payment-box img {
+            width: 60px;
+            margin: 10px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: transform 0.2s
+        }
+        
+        .payment-box img:hover {
+            transform: scale(1.05)
+        }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1>Collect the Coins</h1>
+
+        <div id="hud">
+            <div id="counters">
+                <div class="counter">
+                    <div style="font-size:12px;opacity:0.8">Coins Collected</div>
+                    <strong id="coinCount">0</strong>
+                </div>
+                <div class="counter">
+                    <div style="font-size:12px;opacity:0.8">Equivalent (INR)</div>
+                    <strong id="inrValue">₹0</strong>
+                </div>
+                <div class="counter">
+                    <div style="font-size:12px;opacity:0.8">Fooling Mode</div>
+                    <strong id="foolingValue">Off</strong>
+                </div>
+            </div>
+
+            <div id="controls">
+                <br><label class="badge">1 coin = ₹12</label>
+                <button id="resetBtn">Reset</button>
+                <button id="toggleFool">Toggle</button>
+                <button id="buyCoinsBtn">Buy Coins</button>
+            </div>
+        </div>
+
+        <canvas id="game" width="720" height="720"></canvas>
+
+        <div class="info">
+            Use <strong>arrow keys</strong> or <strong>WASD</strong> to move. Collect all coins to win. "Fooling mode" shows a playful (fake) conversion multiplier.
+        </div>
+        <footer>Built with HTML5 canvas — retro vibes!</footer>
+    </div>
+
+    <div id="paymentPopup" class="payment-popup" style="display:none">
+        <div class="payment-box">
+            <h3>Select Payment Method</h3>
+            <p>Convert INR to in-game coins</p>
+            <div>
+                <img src="https://images.seeklogo.com/logo-png/33/2/google-pay-logo-png_seeklogo-334912.png" alt="GPay" onclick="proceedPayment()">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/4/42/Paytm_logo.png" alt="Paytm" onclick="proceedPayment()">
+                <img src="data:image/png;base64,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"
+                    alt="PhonePe" onclick="proceedPayment()">
+            </div>
+            <button onclick="closePayment()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        const TILE = 24,
+            COLS = 24,
+            ROWS = 24,
+            PLAYER_COLOR = '#ffd166',
+            WALL_COLOR = '#0b6e4f',
+            FLOOR_COLOR = '#081421',
+            COIN_COLOR = '#ffcd3c',
+            COIN_VALUE_INR = 12;
+        const layout = ["111111111111111111111111", "100000000010000000000001", "101111011010111011110101", "100001010010001010000001", "111101011111101011111101", "100001000000101000000001", "101111011110101011111101", "100000010000101000000001", "111110111011101111101111", "100010000010000000100001", "101011111011111110111101", "101000000000000010000101", "101011111011111011110101", "101000001010000010000101", "101111101011111011110101", "100000001000000010000001", "111111101011111011111111", "100000001010000010000001", "101111101011111011111101", "101000101000001010000101", "101110101111101011110101", "100000100000001000000001", "101111111111111111111101", "111111111111111111111111"].map(r => r.split('').map(Number));
+        let canvas, ctx, player = {
+                x: 1,
+                y: 1
+            },
+            coins = [],
+            collected = 0,
+            fooling = false;
+
+        function placeCoins() {
+            coins = [];
+            for (let y = 1; y < ROWS - 1; y++) {
+                for (let x = 1; x < COLS - 1; x++) {
+                    if (layout[y][x] === 0) {
+                        if (Math.random() < 0.06) {
+                            if (!(x === player.x && y === player.y)) coins.push({
+                                x,
+                                y,
+                                got: false
+                            });
+                        }
+                    }
+                }
+            }
+            while (coins.length < 6) {
+                const rx = 1 + Math.floor(Math.random() * (COLS - 2)),
+                    ry = 1 + Math.floor(Math.random() * (ROWS - 2));
+                if (layout[ry][rx] === 0 && !(rx === player.x && ry === player.y) && !coins.some(c => c.x === rx && c.y === ry)) coins.push({
+                    x: rx,
+                    y: ry,
+                    got: false
+                });
+            }
+        }
+
+        function init() {
+            canvas = document.getElementById('game');
+            ctx = canvas.getContext('2d');
+            canvas.width = COLS * TILE;
+            canvas.height = ROWS * TILE;
+            placeCoins();
+            collected = 0;
+            updateHUD();
+            bindKeys();
+            requestAnimationFrame(loop);
+        }
+
+        function draw() {
+            ctx.fillStyle = FLOOR_COLOR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    if (layout[y][x] === 1) {
+                        ctx.fillStyle = WALL_COLOR;
+                        ctx.fillRect(x * TILE, y * TILE, TILE, TILE);
+                    }
+                }
+            }
+            for (const c of coins) {
+                if (c.got) continue;
+                const cx = c.x * TILE + TILE / 2,
+                    cy = c.y * TILE + TILE / 2;
+                ctx.beginPath();
+                ctx.fillStyle = COIN_COLOR;
+                ctx.arc(cx, cy, TILE * 0.28, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+                ctx.beginPath();
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.arc(cx - TILE * 0.08, cy - TILE * 0.12, TILE * 0.08, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+            }
+            const px = player.x * TILE + TILE / 2,
+                py = player.y * TILE + TILE / 2;
+            ctx.beginPath();
+            ctx.fillStyle = PLAYER_COLOR;
+            ctx.arc(px, py, TILE * 0.38, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
+            ctx.fillStyle = '#081421';
+            ctx.fillRect(px - TILE * 0.12, py - TILE * 0.05, TILE * 0.05, TILE * 0.08);
+            ctx.fillRect(px + TILE * 0.07, py - TILE * 0.05, TILE * 0.05, TILE * 0.08);
+        }
+
+        function loop() {
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function move(dx, dy) {
+            const nx = player.x + dx,
+                ny = player.y + dy;
+            if (nx < 0 || nx >= COLS || ny < 0 || ny >= ROWS) return;
+            if (layout[ny][nx] === 1) return;
+            player.x = nx;
+            player.y = ny;
+            checkCoinCollision();
+        }
+
+        function checkCoinCollision() {
+            for (const c of coins) {
+                if (!c.got && c.x === player.x && c.y === player.y) {
+                    c.got = true;
+                    collected++;
+                    updateHUD();
+                    flashMessage('+1 coin!');
+                    if (collected === coins.length) showWin();
+                    return;
+                }
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('coinCount').innerText = collected + ' / ' + coins.length;
+            const base = collected * COIN_VALUE_INR;
+            if (!fooling) {
+                document.getElementById('inrValue').innerText = '₹' + numberWithCommas(base);
+                document.getElementById('foolingValue').innerText = 'Off';
+            } else {
+                const mult = (1 + (Math.sin(collected * 1.7) + 2) * 0.5).toFixed(2);
+                document.getElementById('inrValue').innerText = '₹' + numberWithCommas(Math.round(base * mult)) + ' (' + mult + 'x)';
+                document.getElementById('foolingValue').innerText = 'On';
+            }
+        }
+
+        function numberWithCommas(x) {
+            return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function showWin() {
+            setTimeout(() => {
+                alert(`You collected all coins!\\nTotal: ${collected} coin(s) — ${document.getElementById('inrValue').innerText}`);
+            }, 120);
+        }
+
+        function flashMessage(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            Object.assign(div.style, {
+                position: 'fixed',
+                left: '50%',
+                top: '16px',
+                transform: 'translateX(-50%)',
+                padding: '8px 12px',
+                background: '#112233',
+                border: '1px solid rgba(255,255,255,0.06)',
+                borderRadius: '8px',
+                zIndex: 9999
+            });
+            document.body.appendChild(div);
+            setTimeout(() => div.style.opacity = '0', 700);
+            setTimeout(() => div.remove(), 1200);
+        }
+
+        function bindKeys() {
+            window.addEventListener('keydown', e => {
+                if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+                    move(0, -1);
+                    e.preventDefault();
+                }
+                if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                    move(0, 1);
+                    e.preventDefault();
+                }
+                if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                    move(-1, 0);
+                    e.preventDefault();
+                }
+                if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                    move(1, 0);
+                    e.preventDefault();
+                }
+            });
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                player = {
+                    x: 1,
+                    y: 1
+                };
+                placeCoins();
+                collected = 0;
+                updateHUD();
+            });
+            document.getElementById('toggleFool').addEventListener('click', () => {
+                fooling = !fooling;
+                updateHUD();
+            });
+            document.getElementById('buyCoinsBtn').addEventListener('click', () => {
+                document.getElementById('paymentPopup').style.display = 'flex';
+            });
+        }
+
+        function closePayment() {
+            document.getElementById('paymentPopup').style.display = 'none';
+        }
+
+        function proceedPayment() {
+            closePayment();
+            window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank');
+        }
+        init();
+    </script>
+</body>
+
+</html>
